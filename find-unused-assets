@@ -29,6 +29,7 @@ rg -oN 'guid: ([0-9a-f]{32})' \
   --glob '!UserSettings/' \
   --glob '!ProjectSettings/' \
   --glob '!Packages/' \
+  --glob '!AddressableAssetsData/' \
   --no-ignore \
   -r '$1' \
   "$SEARCH_ROOT" 2>/dev/null > "$WORK/meta_map"
@@ -67,9 +68,13 @@ if [[ ! -s "$WORK/unused" ]]; then
 fi
 
 # 미사용 GUID를 에셋 경로로 변환
+# 디렉토리(폴더)는 제외 — 폴더는 GUID 참조되지 않는 것이 정상
 grep -F -f "$WORK/unused" "$WORK/meta_map" \
   | sed 's/:[^:]*$//' \
   | sed 's/\.meta$//' \
+  | while IFS= read -r path; do
+      [[ -f "$path" ]] && echo "$path"
+    done \
   | sort > "$WORK/result"
 
 COUNT=$(wc -l < "$WORK/result" | tr -d ' ')

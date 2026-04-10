@@ -98,6 +98,7 @@ find-missing-refs Assets/Scenes
 ### find-unused-assets — 미사용 에셋 찾기
 
 프로젝트 내 어디에서도 참조되지 않는 에셋을 찾습니다.
+디렉토리(폴더)와 `AddressableAssetsData/`는 자동으로 결과에서 제외됩니다.
 
 > **주의:** 다음은 GUID 참조 없이 사용될 수 있으므로 결과를 검토하세요.
 > - `Resources/` 폴더 (런타임 이름 로드)
@@ -120,5 +121,5 @@ find-unused-assets Assets/Materials
 
 | 구분 | 제외 항목 |
 |------|-----------|
-| 디렉토리 | `Library/` `Temp/` `Logs/` `obj/` `.git/` `UserSettings/` `ProjectSettings/` `Packages/` |
+| 디렉토리 | `Library/` `Temp/` `Logs/` `obj/` `.git/` `UserSettings/` `ProjectSettings/` `Packages/` `AddressableAssetsData/` |
 | 바이너리 에셋 | 이미지(`png`, `jpg`, `psd` 등), 오디오(`wav`, `mp3` 등), 3D 모델(`fbx`, `blend` 등), 동영상, 폰트, 네이티브 라이브러리, 압축 파일 |
