@@ -39,7 +39,7 @@ export PATH="/path/to/unity-tools:$PATH"
 ## 명령어
 
 모든 명령어는 **Unity 프로젝트 루트**에서 실행하세요.
-두 번째 인자 `search_root`를 생략하면 현재 디렉토리(`.`)를 기준으로 검색합니다.
+`search_root`를 생략하면 현재 디렉토리(`.`)를 기준으로 검색합니다.
 
 ### find-guid — GUID로 에셋 찾기
 
@@ -81,11 +81,44 @@ find-asset-refs Assets/Scripts/PlayerController.cs
 find-asset-refs Assets/Materials/Default.mat Assets/Scenes
 ```
 
+### find-missing-refs — 깨진 참조 찾기
+
+씬이나 프리팹 등에서 참조하는 GUID 중 대응하는 `.meta` 파일이 없는 것을 탐지합니다.
+Unity 내장 GUID(`0000000000000000X000000000000000` 패턴)는 자동으로 필터링됩니다.
+
+```bash
+find-missing-refs [search_root]
+```
+
+```bash
+find-missing-refs
+find-missing-refs Assets/Scenes
+```
+
+### find-unused-assets — 미사용 에셋 찾기
+
+프로젝트 내 어디에서도 참조되지 않는 에셋을 찾습니다.
+
+> **주의:** 다음은 GUID 참조 없이 사용될 수 있으므로 결과를 검토하세요.
+> - `Resources/` 폴더 (런타임 이름 로드)
+> - `StreamingAssets/` 폴더 (직접 파일 접근)
+> - 씬 파일 (빌드 설정에서 직접 지정)
+> - Addressables / AssetBundle 에셋
+
+```bash
+find-unused-assets [search_root]
+```
+
+```bash
+find-unused-assets
+find-unused-assets Assets/Materials
+```
+
 ## 검색 제외 대상
 
 검색 성능과 정확도를 위해 다음은 자동으로 제외됩니다.
 
 | 구분 | 제외 항목 |
 |------|-----------|
-| 디렉토리 | `Library/` `Temp/` `Logs/` `obj/` `.git/` |
+| 디렉토리 | `Library/` `Temp/` `Logs/` `obj/` `.git/` `UserSettings/` `ProjectSettings/` `Packages/` |
 | 바이너리 에셋 | 이미지(`png`, `jpg`, `psd` 등), 오디오(`wav`, `mp3` 등), 3D 모델(`fbx`, `blend` 등), 동영상, 폰트, 네이티브 라이브러리, 압축 파일 |

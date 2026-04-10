@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+# Unity 미사용 에셋 검색 스크립트
+# 사용법: find-unused-assets [검색경로]
+# 프로젝트 내 어디에서도 참조되지 않는 에셋을 찾습니다.
+#
+# 주의: 다음은 GUID 참조 없이 사용될 수 있으므로 결과를 검토하세요:
+#   - Resources/ 폴더 (런타임 이름 로드)
+#   - StreamingAssets/ 폴더 (직접 파일 접근)
+#   - 씬 파일 (빌드 설정에서 직접 지정)
+#   - Addressables/AssetBundle 에셋
+
+set -euo pipefail
+
+SEARCH_ROOT="${1:-.}"
+WORK=$(mktemp -d)
+trap 'rm -rf "$WORK"' EXIT
+
+echo "미사용 에셋을 검색합니다..." >&2
+
+# .meta 파일에서 GUID와 경로 매핑 수집
+# UserSettings/, ProjectSettings/, Packages/ 제외 (프로젝트 에셋만 대상)
+# 출력 형식: path/to/file.meta:guid_hex
+rg -oN 'guid: ([0-9a-f]{32})' \
+  --glob '*.meta' \
+  --glob '!Library/' \
+  --glob '!Temp/' \
+  --glob '!Logs/' \
+  --glob '!.git/' \
+  --glob '!UserSettings/' \
+  --glob '!ProjectSettings/' \
+  --glob '!Packages/' \
+  --no-ignore \
+  -r '$1' \
+  "$SEARCH_ROOT" 2>/dev/null > "$WORK/meta_map"
+
+# 정의된 GUID 목록
+awk -F: '{print $NF}' "$WORK/meta_map" | sort -u > "$WORK/defined"
+
+# 에셋 파일에서 참조되는 GUID 목록
+rg -oN --no-filename 'guid: ([0-9a-f]{32})' \
+  --glob '!*.meta' \
+  --glob '!Library/' \
+  --glob '!Temp/' \
+  --glob '!Logs/' \
+  --glob '!obj/' \
+  --glob '!.git/' \
+  --glob '!UserSettings/' \
+  --glob '!ProjectSettings/' \
+  --glob '!Packages/' \
+  --glob '!*.{png,jpg,jpeg,tga,psd,exr,hdr,tif,tiff,bmp,gif,ico}' \
+  --glob '!*.{wav,mp3,ogg,aif,aiff,flac}' \
+  --glob '!*.{fbx,blend,dae,3ds,obj,stl,ply}' \
+  --glob '!*.{mp4,mov,avi,webm}' \
+  --glob '!*.{ttf,otf,woff,woff2}' \
+  --glob '!*.{dll,so,dylib,a,lib,exe}' \
+  --glob '!*.{zip,gz,tar,rar,7z,unitypackage}' \
+  --no-ignore \
+  -r '$1' \
+  "$SEARCH_ROOT" 2>/dev/null | sort -u > "$WORK/referenced"
+
+# 정의되었지만 참조되지 않은 GUID = 미사용
+comm -23 "$WORK/defined" "$WORK/referenced" > "$WORK/unused"
+
+if [[ ! -s "$WORK/unused" ]]; then
+  echo "미사용 에셋이 없습니다." >&2
+  exit 0
+fi
+
+# 미사용 GUID를 에셋 경로로 변환
+grep -F -f "$WORK/unused" "$WORK/meta_map" \
+  | sed 's/:[^:]*$//' \
+  | sed 's/\.meta$//' \
+  | sort > "$WORK/result"
+
+COUNT=$(wc -l < "$WORK/result" | tr -d ' ')
+echo "미사용 에셋 ${COUNT}건:" >&2
+echo "---" >&2
+
+cat "$WORK/result"

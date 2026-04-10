@@ -24,6 +24,9 @@ rg -lF "$GUID" \
   --glob '!Temp/' \
   --glob '!obj/' \
   --glob '!.git/' \
+  --glob '!UserSettings/' \
+  --glob '!ProjectSettings/' \
+  --glob '!Packages/' \
   --glob '!*.{png,jpg,jpeg,tga,psd,exr,hdr,tif,tiff,bmp,gif,ico}' \
   --glob '!*.{wav,mp3,ogg,aif,aiff,flac}' \
   --glob '!*.{fbx,blend,dae,3ds,obj,stl,ply}' \

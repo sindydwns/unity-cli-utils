@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+# Unity 깨진 참조 검색 스크립트
+# 사용법: find-missing-refs [검색경로]
+# 씬, 프리팹 등에서 참조하는 GUID 중 대응하는 .meta 파일이 없는 것을 찾습니다.
+
+set -euo pipefail
+
+SEARCH_ROOT="${1:-.}"
+WORK=$(mktemp -d)
+trap 'rm -rf "$WORK"' EXIT
+
+# Unity 내장 GUID 제외 패턴
+# 0000000000000000[0-9a-f]000000000000000 형태의 Unity 엔진 내부 GUID
+BUILTIN_GUID_PATTERN='^0{16}[0-9a-f]0{15}$'
+
+echo "깨진 참조를 검색합니다..." >&2
+
+# .meta 파일에 정의된 모든 GUID 수집
+rg -oN --no-filename 'guid: ([0-9a-f]{32})' \
+  --glob '*.meta' \
+  --glob '!Library/' \
+  --glob '!Temp/' \
+  --glob '!Logs/' \
+  --glob '!.git/' \
+  --no-ignore \
+  -r '$1' \
+  "$SEARCH_ROOT" 2>/dev/null | sort -u > "$WORK/defined"
+
+# 에셋 파일에서 참조하는 모든 GUID 수집
+# UserSettings/, ProjectSettings/, Packages/ 제외
+rg -oN --no-filename 'guid: ([0-9a-f]{32})' \
+  --glob '!*.meta' \
+  --glob '!Library/' \
+  --glob '!Temp/' \
+  --glob '!Logs/' \
+  --glob '!obj/' \
+  --glob '!.git/' \
+  --glob '!UserSettings/' \
+  --glob '!ProjectSettings/' \
+  --glob '!Packages/' \
+  --glob '!*.{png,jpg,jpeg,tga,psd,exr,hdr,tif,tiff,bmp,gif,ico}' \
+  --glob '!*.{wav,mp3,ogg,aif,aiff,flac}' \
+  --glob '!*.{fbx,blend,dae,3ds,obj,stl,ply}' \
+  --glob '!*.{mp4,mov,avi,webm}' \
+  --glob '!*.{ttf,otf,woff,woff2}' \
+  --glob '!*.{dll,so,dylib,a,lib,exe}' \
+  --glob '!*.{zip,gz,tar,rar,7z,unitypackage}' \
+  --no-ignore \
+  -r '$1' \
+  "$SEARCH_ROOT" 2>/dev/null | sort -u > "$WORK/referenced_raw"
+
+# Unity 내장 GUID 제외
+grep -Ev "$BUILTIN_GUID_PATTERN" "$WORK/referenced_raw" > "$WORK/referenced" || true
+
+# 참조되지만 정의되지 않은 GUID = 깨진 참조
+comm -23 "$WORK/referenced" "$WORK/defined" > "$WORK/missing"
+
+if [[ ! -s "$WORK/missing" ]]; then
+  echo "깨진 참조가 없습니다." >&2
+  exit 0
+fi
+
+COUNT=$(wc -l < "$WORK/missing" | tr -d ' ')
+echo "깨진 참조 ${COUNT}건 발견:" >&2
+echo "---" >&2
+
+while IFS= read -r guid; do
+  echo ""
+  echo "GUID: $guid"
+  rg -lF "$guid" \
+    --glob '!*.meta' \
+    --glob '!Library/' \
+    --glob '!Temp/' \
+    --glob '!Logs/' \
+    --glob '!obj/' \
+    --glob '!.git/' \
+    --glob '!UserSettings/' \
+    --glob '!ProjectSettings/' \
+    --glob '!Packages/' \
+    --glob '!*.{png,jpg,jpeg,tga,psd,exr,hdr,tif,tiff,bmp,gif,ico}' \
+    --glob '!*.{wav,mp3,ogg,aif,aiff,flac}' \
+    --glob '!*.{fbx,blend,dae,3ds,obj,stl,ply}' \
+    --glob '!*.{mp4,mov,avi,webm}' \
+    --glob '!*.{ttf,otf,woff,woff2}' \
+    --glob '!*.{dll,so,dylib,a,lib,exe}' \
+    --glob '!*.{zip,gz,tar,rar,7z,unitypackage}' \
+    --no-ignore \
+    "$SEARCH_ROOT" 2>/dev/null | sed 's/^/  /' || true
+done < "$WORK/missing"

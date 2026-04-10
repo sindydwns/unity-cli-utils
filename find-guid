@@ -20,6 +20,9 @@ rg -lF "guid: $GUID" \
   --glob '!Temp/' \
   --glob '!Logs/' \
   --glob '!.git/' \
+  --glob '!UserSettings/' \
+  --glob '!ProjectSettings/' \
+  --glob '!Packages/' \
   --no-ignore \
   "$SEARCH_ROOT" 2>/dev/null \
 | sed 's/\.meta$//' || true
