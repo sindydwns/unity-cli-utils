@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Unity 에셋 참조 검색 스크립트
+# 사용법: find-asset-refs <파일경로> [검색경로]
+# 파일의 .meta에서 guid를 추출한 뒤, 해당 guid를 참조하는 모든 에셋을 출력합니다.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+if [[ $# -lt 1 ]]; then
+  echo "Usage: find-asset-refs <asset_path> [search_root]" >&2
+  exit 1
+fi
+
+ASSET_PATH="$1"
+SEARCH_ROOT="${2:-.}"
+
+META_FILE="${ASSET_PATH}.meta"
+if [[ ! -f "$META_FILE" ]]; then
+  echo "Error: meta 파일을 찾을 수 없습니다: $META_FILE" >&2
+  exit 1
+fi
+
+GUID=$(sed -n 's/^guid: \([0-9a-f]*\).*/\1/p' "$META_FILE" 2>/dev/null || true)
+if [[ -z "$GUID" ]]; then
+  echo "Error: meta 파일에서 guid를 추출할 수 없습니다: $META_FILE" >&2
+  exit 1
+fi
+
+echo "Asset: $ASSET_PATH" >&2
+echo "GUID:  $GUID" >&2
+echo "---" >&2
+
+"$SCRIPT_DIR/find-guid-refs" "$GUID" "$SEARCH_ROOT"

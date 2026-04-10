@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Unity GUID 참조 검색 스크립트
+# 사용법: find-guid-refs <guid> [검색경로]
+# 해당 guid를 참조하고 있는 에셋 파일들을 찾아 출력합니다.
+# (.meta 파일은 자기 자신의 guid 정의이므로 제외)
+
+set -euo pipefail
+
+if [[ $# -lt 1 ]]; then
+  echo "Usage: find-guid-refs <guid> [search_root]" >&2
+  exit 1
+fi
+
+GUID="$1"
+SEARCH_ROOT="${2:-.}"
+
+# 캐시/임시/VCS 디렉토리 제외
+# .meta 제외 (자기 자신의 guid 정의)
+# 바이너리 에셋 확장자를 glob으로 제외하여 파일 open 자체를 방지
+rg -lF "$GUID" \
+  --glob '!*.meta' \
+  --glob '!Library/' \
+  --glob '!Logs/' \
+  --glob '!Temp/' \
+  --glob '!obj/' \
+  --glob '!.git/' \
+  --glob '!*.{png,jpg,jpeg,tga,psd,exr,hdr,tif,tiff,bmp,gif,ico}' \
+  --glob '!*.{wav,mp3,ogg,aif,aiff,flac}' \
+  --glob '!*.{fbx,blend,dae,3ds,obj,stl,ply}' \
+  --glob '!*.{mp4,mov,avi,webm}' \
+  --glob '!*.{ttf,otf,woff,woff2}' \
+  --glob '!*.{dll,so,dylib,a,lib,exe}' \
+  --glob '!*.{zip,gz,tar,rar,7z,unitypackage}' \
+  --no-ignore \
+  "$SEARCH_ROOT" 2>/dev/null \
+|| true
+

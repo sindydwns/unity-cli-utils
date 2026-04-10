@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Unity 에셋 GUID 검색 스크립트
+# 사용법: find-guid <guid> [검색경로]
+# .meta 파일에서 guid를 검색하여 해당 에셋 경로를 출력합니다.
+
+set -euo pipefail
+
+if [[ $# -lt 1 ]]; then
+  echo "Usage: find-guid <guid> [search_root]" >&2
+  exit 1
+fi
+
+GUID="$1"
+SEARCH_ROOT="${2:-.}"
+
+# Library, Temp, Logs, .git 등 불필요한 디렉토리 제외
+rg -lF "guid: $GUID" \
+  --glob '*.meta' \
+  --glob '!Library/' \
+  --glob '!Temp/' \
+  --glob '!Logs/' \
+  --glob '!.git/' \
+  --no-ignore \
+  "$SEARCH_ROOT" 2>/dev/null \
+| sed 's/\.meta$//' || true
+
